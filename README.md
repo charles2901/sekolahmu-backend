@@ -1,11 +1,11 @@
 ## Take Home Test - Backend
 
 ## Setup
-
-> 1. Pada file config/config.json, masukkan informasi postgresql dan nama untuk database yang diinginkan
-> 2. Di terminal, jalankan _**npm i**_
-> 3. Setelah instalasi selesai, jalankan _**npm run setup**_ di terminal
-> 4. Lalu, jalankan node app.js
+> 1. Masuk ke folder server
+> 2. Pada file config/config.json bagian development, masukkan informasi postgresql dan nama untuk database yang diinginkan
+> 3. Di terminal, jalankan _**npm i**_
+> 4. Setelah instalasi selesai, jalankan _**npm run setup**_ di terminal
+> 5. Lalu, jalankan node app.js
 
 ## Asumsi
 
