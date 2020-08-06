@@ -46,14 +46,14 @@ _Request Body_
 
 ```
 
-_Response (201 - Created)_
+_Response (200 - OK)_
 ```
 {
     "access_token": string
 }
 ```
 
-> Untuk endpoint selanjutnya, login terlebih dahulu untuk memperoleh token lalu set header untuk tiap api
+### Untuk endpoint selanjutnya, login terlebih dahulu untuk memperoleh token lalu set header untuk tiap api
 
 _Request Header_
 ```
@@ -76,7 +76,15 @@ _Request Body_
 _Response (201 - Created)_
 ```
 {
-    "access_token": string
+    "id": Integer,
+    "rows": Integer,
+    "columns": Integer,
+    "teacher": String,
+    "available_seats": Array,
+    "occupied_seats": Array,
+    "createdAt": Date,
+    "updatedAt": Date,
+    "message": String 
 }
 ```
 
