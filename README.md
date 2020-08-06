@@ -3,8 +3,9 @@
 ## Setup
 
 > 1. Pada file config/config.json, masukkan informasi postgresql dan nama untuk database yang diinginkan
-> 2. Di terminal, jalankan _npm i_
-> 3. Setelah instalasi selesai, jalankan _npm run setup_ di terminal
+> 2. Di terminal, jalankan _**npm i**_
+> 3. Setelah instalasi selesai, jalankan _**npm run setup**_ di terminal
+> 4. Lalu, jalankan node app.js
 
 ## Asumsi
 
