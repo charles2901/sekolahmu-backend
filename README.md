@@ -9,8 +9,9 @@
 
 ## Asumsi
 
-> 1. Nama siswa dari murid yang mendaftarkan diasumsikan unik satu sama lainnya
-> 2. Saat menembak api dengan parameter id kelas, id kelas yang dimasukkan selalu valid atau ada di database
+> 1. Nama siswa dari murid yang mendaftarkan diasumsikan unik satu sama lainnya, hal ini bertujuan untuk membuat lebih simpel api sehingga tidak perlu memakai relasi tabel
+> 2. Saat menembak api dengan parameter id kelas, id kelas yang dimasukkan selalu valid atau ada di database, karena list kelas yang ditampilan dibagian frontend berdasarkan yang telah diquery dari db
+> 3. Seat yang diperoleh siswa diatur otomatis berurutan oleh sistem
 
 Sebelum mengakses API, dapat login terlebih dahulu untuk memperoleh akses token. 
 Seeding user yang ada yaitu 
