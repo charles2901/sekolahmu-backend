@@ -1,7 +1,8 @@
 const { Class } = require('../models')
+const jsonParse = require('../helpers/parseJSON')
 
 class ClassController{
-    static createClass(req, res, next){
+    static async createClass(req, res, next){
         const { rows, columns } = req.body
         const alphabet = String.fromCharCode(...Array(123).keys()).slice(97).toUpperCase()
         const teacher = 'out'
@@ -12,146 +13,124 @@ class ClassController{
                 available_seats.push(i + alphabet[j])
             }
         }
-        Class.create({rows, columns, teacher, available_seats, occupied_seats})
-        .then((createdClass) => {
-            res.status(200).json(createdClass)
-        })
-        .catch(err => {
+        try{
+            const newClass = await Class.create({rows, columns, teacher, available_seats, occupied_seats})
+            res.status(200).json(newClass)
+        }
+        catch(err){
             next(err)
-        })
+        }
+        
+        
         
     }
 
-    static findOne(req, res, next){
+    static async findOne(req, res, next){
         const {id} = req.params
-        Class.findOne({where: { id }})
-        .then(cl => {
-            res.status(200).json(cl)
-        })
-        .catch(err => {
+        try{
+            const detailCLass = await ClassController.findOneWithArgs(id)
+            if(!detailCLass){
+                next({name: 'NOT_FOUND'})
+            } else {
+                res.status(200).json(detailCLass)
+            }
+        }
+        catch(err){
             next(err)
-        })
+        }
     }
 
-    static findAll(req, res, next){
-        Class.findAll({ attributes : ['id', 'available_seats']})
-        .then(classes => {
-            res.status(200).json(classes)
-        })
-        .catch(err => {
-            next(err)
-        })
+    static findOneWithArgs(args){
+        const detailClass = Class.findOne({where: { id : args }})
+        return detailClass
     }
 
-    static checkin(req, res, next){
+    static async findAll(req, res, next){
+        try{
+            const listClasses = await Class.findAll({ attributes : ['id', 'available_seats']})
+            res.status(200).json(listClasses)
+        }
+        catch(err){
+            next(err)
+        }
+    }
+
+    static async checkin(req, res, next){
         const {id} = req.params
-        
-        if(req.userData.role === "pengajar"){
-            Class.findOne({where: {id}})
-            .then(cl => {
-                if(cl.teacher === "in"){
-                    throw res.status(400).json({...cl.dataValues, message: "Sorry, there is already teacher in this classroom"})
-                } else {
-                    return Class.update({teacher: 'in'}, {where: {id}})
-                }
-            })
-            .then(() => {
-                return Class.findOne({where: {id}})
-            })
-            .then(cl => {
-                res.status(200).json({...cl.dataValues, message: `Guru ${req.userData.name} has checkin to class`})
-            })
-            .catch(err => {
-                next(err)
-            })
-        } else if(req.userData.role === "murid"){
-            let selectedSeat = ''
-            Class.findOne({where: {id}})
-            .then(cl => {
-                if(cl.available_seats.length === 0){
-                    let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                    throw res.status(400).json({...cl.dataValues, occupied_seats : parseJSONSeat , message: `Hi ${req.userData.name}, the class is fully seated`})
-                } else {
-                    let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                    const checkAlrInClass = parseJSONSeat.filter(el => el.student_name === req.userData.name)
-                    if(checkAlrInClass.length === 0){
-                        selectedSeat = cl.dataValues.available_seats[0]
-                        return Class.update({ available_seats : cl.available_seats.slice(1), occupied_seats: [...cl.dataValues.occupied_seats, JSON.stringify({ "seat" : cl.available_seats[0], "student_name" : req.userData.name })]}, {where: {id}})
+        const selectedClass = await ClassController.findOneWithArgs(id)
+        try{
+            const parseJSONSeat = selectedClass.occupied_seats.map(seat => JSON.parse(seat))
+            switch(req.userData.role){
+                case "pengajar" :
+                    if(selectedClass.teacher === "in"){
+                        res.status(400).json({...selectedClass.dataValues, occupied_seats : parseJSONSeat, message: "Sorry, there is already teacher in this classroom"})
                     } else {
-                        throw res.status(400).json({...cl.dataValues, occupied_seats : parseJSONSeat , message: `Hi ${req.userData.name}, you already checkin this class`})
+                        await Class.update({teacher: "in"}, {where: {id}})
+                        const updatedClass = await ClassController.findOneWithArgs(id)
+                        res.status(400).json({...updatedClass.dataValues, occupied_seats : jsonParse(updatedClass.dataValues.occupied_seats), message: `${req.userData.name} has checkin to class`})
                     }
-                }
-            })
-            .then(() => {
-                return Class.findOne({where: {id}})
-            })
-            .then(cl => {
-                let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                res.status(200).json({...cl.dataValues, occupied_seats : parseJSONSeat , message: `Hi ${req.userData.name}, your seat is ${selectedSeat}`})
-            })
-            .catch(err => {
-                next(err)
-            })
-        } else {
-            Class.findOne({where: {id}})
-            .then(cl =>{
-                let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                res.status(200).json({...cl.dataValues, occupied_seats : parseJSONSeat})
-            })
+                case "murid" :
+                    if(!selectedClass.available_seats.length){
+                        res.status(400).json({...cl.dataValues, occupied_seats : parseJSONSeat , message: `Hi ${req.userData.name}, the class is fully seated`})
+                    } else{
+                        let flagStudent = parseJSONSeat.filter(seat => seat.student_name === req.userData.name)
+                        let selectedSeat = ""
+                        if(!flagStudent.length){
+                            selectedSeat = selectedClass.dataValues.available_seats[0]
+                            await Class.update({ available_seats : selectedClass.available_seats.slice(1), occupied_seats: [...selectedClass.dataValues.occupied_seats, JSON.stringify({ "seat" : selectedClass.available_seats[0], "student_name" : req.userData.name })]}, {where: {id}})
+                            const updatedClass = await ClassController.findOneWithArgs(id)
+                            res.status(400).json({...updatedClass.dataValues, occupied_seats : jsonParse(updatedClass.dataValues.occupied_seats), message: `Hi ${req.userData.name}, your seat is ${selectedSeat}`})
+                        } else {
+                            res.status(400).json({...selectedClass.dataValues, occupied_seats : parseJSONSeat , message: `Hi ${req.userData.name}, you already checkin this class`})
+                        }
+                    }
+                case "admin" :
+                    res.status(200).json({...selectedClass.dataValues, occupied_seats: parseJSONSeat})
+                default :
+                    res.status(404).json({message: "Service is unavailable"})
+            }
+        }
+
+        catch(err){
+            next(err)
         }
     }
 
-    static checkout(req, res, next){
+    static async checkout(req, res, next){
         const {id} = req.params
-        
-        if(req.userData.role === "pengajar"){
-            Class.findOne({where: {id}})
-            .then(cl => {
-                if(cl.teacher === "out"){
-                    res.status(404).json({...cl.dataValues, message: "Sorry, you haven't checkin yet in this classroom"})
-                } else {
-                    return Class.update({teacher: 'out'}, {where: {id}})
-                }
-            })
-            .then(resp => {
-                res.status(200).json(resp)
-            })
-            .catch(err => {
-                next(err)
-            })
-        } else if(req.userData.role ==="murid"){
-            let checkoutSeat = ''
-            Class.findOne({where: {id}})
-            .then(cl => {
-                let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                let checkInClass = parseJSONSeat.filter(el => el.student_name === req.userData.name)
-                if(checkInClass.length === 0){
-                    let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                    throw res.status(400).json({...cl.dataValues, occupied_seats : parseJSONSeat ,message: `Hi ${req.userData.name}, you haven't checkin in this classroom yet`})
-                } else {
-                    checkoutSeat = checkInClass[0].seat
-                    return Class.update({ available_seats : [...cl.dataValues.available_seats, checkoutSeat], occupied_seats: parseJSONSeat.filter(el => el.seat !== checkoutSeat).map(element => JSON.stringify(element))}, {where: {id}})
-                }
-            })
-            .then(() => {
-                return Class.findOne({where: {id}})
-            })
-            .then(cl => {
-                let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                res.status(200).json({...cl.dataValues, occupied_seats : parseJSONSeat , message: `Hi ${req.userData.name}, ${checkoutSeat} is now available for other students`})
-            })
-            .catch(err => {
-                console.log(err)
-                next(err)
-            })
-        } else {
-            Class.findOne({where: {id}})
-            .then(cl =>{
-                let parseJSONSeat = cl.occupied_seats.map(el => JSON.parse(el))
-                res.status(200).json({...cl.dataValues, occupied_seats : parseJSONSeat})
-            })
+        const selectedClass = await ClassController.findOneWithArgs(id)
+        try{
+            const parseJSONSeat = selectedClass.occupied_seats.map(seat => JSON.parse(seat))
+            switch(req.userData.role){
+                case "pengajar" :
+                    if(selectedClass.teacher === "out"){
+                        res.status(400).json({...selectedClass.dataValues, occupied_seats : parseJSONSeat, message: "Sorry, you haven't checkin yet in this classroom"})
+                    } else {
+                        await Class.update({teacher: "out"}, {where: {id}})
+                        const updatedClass = await ClassController.findOneWithArgs(id)
+                        res.status(400).json({...updatedClass.dataValues, occupied_seats : jsonParse(updatedClass.dataValues.occupied_seats), message: `${req.userData.name} has checkout from class`})
+                    }
+                case "murid" :
+                    let flagStudent = parseJSONSeat.filter(seat => seat.student_name === req.userData.name)
+                    if(!flagStudent.length){
+                        res.status(400).json({...selectedClass.dataValues, occupied_seats: parseJSONSeat, message: `Hi ${req.userData.name}, you haven't checkin in this classroom yet`})
+                    } else {
+                        let checkoutSeat = parseJSONSeat.filter(el => el.student_name === req.userData.name)[0].seat
+                        await Class.update({ available_seats : [...selectedClass.dataValues.available_seats, checkoutSeat], occupied_seats: parseJSONSeat.filter(el => el.seat !== checkoutSeat).map(element => JSON.stringify(element))}, {where: {id}})
+                        const updatedClass = await ClassController.findOneWithArgs(id)
+                        res.status(200).json({...updatedClass.dataValues, occupied_seats : jsonParse(updatedClass.dataValues.occupied_seats), message: `Hi ${req.userData.name}, ${checkoutSeat} is now available for other students`})
+                    }
+                    case "admin" :
+                        res.status(200).json({...selectedClass.dataValues, occupied_seats: parseJSONSeat})
+                        default : 
+                        res.status(404).json({message: "Service is unavailable"})
+                    }
+                } 
+        catch(err){
+            next(err)
         }
     }
+
 }
 
 module.exports = ClassController

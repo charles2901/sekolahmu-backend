@@ -4,7 +4,6 @@ const { comparePassword } = require('../helpers/hashPassword')
 
 class UserController{
     static login(req, res, next){
-        console.log(req.body, '>>>>>>>>>>>>>>>>>')
         const { email, password } = req.body
         User.findOne({ where: { email }})
         .then( user => {

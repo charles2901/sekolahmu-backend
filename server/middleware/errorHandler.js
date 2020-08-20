@@ -19,7 +19,11 @@ function errorHandler(err, req, res, next) {
       error = 'AUTHENTICATION_FAILED'
       errorMessages = 'Invalid token. Please relogin'
       errorStatus = 400
-    } 
+    } else if(err.name === "NOT_FOUND"){
+      error = "CLASS_NOT_FOUND"
+      errorMessages = "Class is not found"
+      errorStatus = 404
+    }
     
   
     res.status(errorStatus).json({
